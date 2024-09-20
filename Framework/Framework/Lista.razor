@@ -1,0 +1,79 @@
+﻿@page "/"
+@using BlazorTask.Framework
+@inject Svc.SvcBuscaPessoa svcBuscaPessoa
+@inject NavigationManager navigationManager
+
+<PageTitle>Lista de Cadastros</PageTitle>
+
+<div class="container">
+    <div class="d-flex justify-content-between mb-3">
+        <AutocompleteCPF OnPessoaSelecionada="PessoaSelecionada"/>
+
+
+        <button class="btn btn-primary float-end" @onclick="RedirectToCadastro">Novo Cadastro</button>
+    </div>
+    <table class="shadow table table-striped table-bordered rounded">
+        <thead class="col">
+            <tr>
+                <th style="text-align:right" scope="col">#</th>
+                <th scope="col">Nome</th>
+                <th scope="col">CPF / CNPJ</th>    
+                <th  scope="col" class="col-1"></th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (pessoas != null && pessoas.Any())
+            {
+                @foreach (var item in pessoasFiltradas ?? pessoas)
+                {
+                    <tr>
+                        <td style="text-align:right">@item.Id</td>
+                        <td>@item.Nome</td>
+                        <td>
+                            @if (item.CpfCnpj.Length == 11)
+                            {
+                                @Convert.ToInt64(item.CpfCnpj).ToString(@"000\.000\.000\-00")
+                            } else if (item.CpfCnpj.Length == 14)
+                            {
+                                @Convert.ToInt64(item.CpfCnpj).ToString(@"00\.000\.000\/0000\-00")
+                            }
+                        </td>
+                        <td style="text-align:center">
+                            <button class="btn btn-danger" @onclick="()=>DeletePessoa(item.Id)"><i class="bi bi-trash3"></i></button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+
+</table>
+</div>
+
+@code {
+    private List<Pessoa> pessoas;
+
+    private List<Pessoa> pessoasFiltradas;
+
+    protected override async Task OnInitializedAsync() // Quando inicia a pagina, carrega a lista
+    {
+        // Carrega a lista de pessoas do LocalStorage
+        pessoas = await svcBuscaPessoa.GetPessoas();
+    }
+
+    private void PessoaSelecionada(Pessoa pessoa)
+    {
+        pessoasFiltradas = pessoas.Where(p => p.CpfCnpj == pessoa.CpfCnpj || p.Nome == pessoa.Nome).ToList();
+    }
+
+    public async Task DeletePessoa(int id)
+    {
+        await svcBuscaPessoa.DeletePessoa(id);
+        pessoas = await svcBuscaPessoa.GetPessoas(); 
+    }
+
+    private void RedirectToCadastro()
+    {
+        navigationManager.NavigateTo("/cadastro");
+    }
+}

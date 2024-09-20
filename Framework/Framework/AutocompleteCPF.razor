@@ -1,0 +1,89 @@
+﻿@page "/autocomplete"
+@using BlazorTask.Framework
+@using Framework.Svc
+@using Microsoft.AspNetCore.Components.Forms
+@inject SvcBuscaPessoa buscaPessoaService
+
+
+<div>
+
+    <label>
+        <InputText class="form-control" style="width:300px" @bind-Value="campoPesquisa" @oninput="ValorDigitado" placeholder="Digite CPF, CNPJ ou Nome"></InputText>
+    </label>
+
+    <div class="dropdown" style="position:relative; width:360px">
+        @if (listaFiltrada.Any())
+        {
+            <ul class="list-group" style="display:block; position:absolute; width:100%; z-index: 1000;">
+                @foreach (var pessoa in listaFiltrada)
+                {
+                    <li class="list-group-item" style="cursor: pointer;" @onclick="() => SelecionarResultado(pessoa)">
+                        @(FormatarCpfCnpj(pessoa)) - @pessoa.Nome
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+
+
+
+
+@code {
+    private string campoPesquisa = string.Empty;
+    private List<Pessoa> listaFiltrada = new List<Pessoa>();
+    private List<Pessoa> todasPessoas = new List<Pessoa>(); // Carrega todas as pessoas do cache
+    
+    [Parameter]
+    public EventCallback<Pessoa> OnPessoaSelecionada{ get; set; }
+
+
+    // Carrega as pessoas do cache ao inicializar o componente
+    protected override async Task OnInitializedAsync()
+    {
+        todasPessoas = await buscaPessoaService.GetPessoas(); // Carrega a lista do LocalStorage
+    }
+
+    // Método de busca quando o usuário digita no campo
+    private void ValorDigitado(ChangeEventArgs digito)
+    {
+        campoPesquisa = digito.Value.ToString();
+
+        if (campoPesquisa.Length >= 3 && todasPessoas != null)
+        {
+            listaFiltrada = todasPessoas
+                .Where(p => p.CpfCnpj.Contains(campoPesquisa) ||
+                            p.Nome.Contains(campoPesquisa, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        } else
+        {
+            listaFiltrada.Clear();
+        }
+    }
+
+    // Formatação de CPF ou CNPJ com base no tipo da pessoa
+    private string FormatarCpfCnpj(Pessoa pessoa)
+    {
+        if (pessoa.Tipo == "Fisica")
+        {
+            return Convert.ToUInt64(pessoa.CpfCnpj).ToString(@"000\.000\.000\-00");
+        } else if (pessoa.Tipo == "Juridica")
+        {
+            return Convert.ToUInt64(pessoa.CpfCnpj).ToString(@"00\.000\.000\/0000\-00");
+        }
+        return pessoa.CpfCnpj;
+    }
+
+    // Ação ao selecionar um item do autocomplete
+    private void SelecionarResultado(Pessoa pessoa)
+    {
+        campoPesquisa = pessoa.CpfCnpj + " - " + pessoa.Nome;
+        listaFiltrada.Clear(); // Limpa a lista após a seleção
+
+        OnPessoaSelecionada.InvokeAsync(pessoa);
+    }
+
+    
+}
+

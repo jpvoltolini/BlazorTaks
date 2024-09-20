@@ -1,0 +1,61 @@
+﻿@page "/cadastro"
+@using BlazorTask.Framework
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject Svc.SvcBuscaPessoa svcBuscaPessoa
+@inject NavigationManager navigation
+@inject IJSRuntime JS
+
+<h3>Cadastro de Pessoa</h3>
+
+<EditForm Model="@novaPessoa" OnValidSubmit="CadastroNovaPessoa">
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-3">
+        <label for="nome">Nome</label>
+        <InputText id="nome" class="form-control" @bind-Value="novaPessoa.Nome" required />
+    </div>
+
+    <div class="mb-3">
+        <label for="cpfCnpj">CPF/CNPJ</label>
+        <InputText id="cpfCnpj" class="form-control col-3" @bind-Value="novaPessoa.CpfCnpj" required />
+    </div>
+
+    <div class="mb-3">
+        <label for="tipo">Tipo</label>
+        <InputSelect id="tipo" class="form-control" @bind-Value="novaPessoa.Tipo" @onchange="OnTipoChange" required>
+            <option value="">Selecione o Tipo</option>
+            <option value="Fisica">Física</option>
+            <option value="Juridica">Jurídica</option>
+        </InputSelect>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Cadastrar</button>
+</EditForm>
+
+@code {
+    private Pessoa novaPessoa = new Pessoa(); // Objeto para armazenar os dados do formulário
+
+    // Método chamado ao submeter o formulário
+    private async Task CadastroNovaPessoa()
+    {
+        // Remove formatação do CPF/CNPJ antes de adicionar
+        novaPessoa.CpfCnpj = novaPessoa.CpfCnpj.Replace(".", "").Replace("-", "").Replace("/", "");
+
+        await svcBuscaPessoa.AddPessoa(novaPessoa); // Chama o serviço para adicionar a nova pessoa no LocalStorage
+
+        novaPessoa = new Pessoa(); // Reseta o formulário
+
+        Console.WriteLine("Cadastro realizado com sucesso. 🚀🚀");
+
+        navigation.NavigateTo("/"); // Redireciona para a página inicial
+    }
+
+    // Método chamado ao mudar o tipo (Física/Jurídica) para aplicar a máscara
+    private async Task OnTipoChange(ChangeEventArgs e)
+    {
+        // Aplica a máscara dinâmica no campo de CPF/CNPJ
+        await JS.InvokeVoidAsync("MaskJquery", "cpfCnpj", novaPessoa.Tipo);
+    }
+}
